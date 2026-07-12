@@ -1,0 +1,57 @@
+{
+  "stocks": [
+    "000001.SZ",
+    "600000.SH"
+  ],
+  "trading_hours": {
+    "enabled": true,
+    "morning_start": "09:20",
+    "morning_end": "11:30",
+    "afternoon_start": "13:00",
+    "afternoon_end": "15:00"
+  },
+  "update_interval_ms": 3000,
+  "display_modes": [
+    {
+      "name": "Pinyin + Price + Change",
+      "name_display": "pinyin",
+      "show_price": true,
+      "show_change": true
+    },
+    {
+      "name": "Chinese + Price + Change",
+      "name_display": "chinese",
+      "show_price": true,
+      "show_change": true
+    },
+    {
+      "name": "Price + Change",
+      "name_display": "none",
+      "show_price": true,
+      "show_change": true
+    },
+    {
+      "name": "Pinyin + Change",
+      "name_display": "pinyin",
+      "show_price": false,
+      "show_change": true
+    }
+  ],
+  "hotkey": {
+    "enabled": true,
+    "key": "f3",
+    "modifier": "ctrl"
+  },
+  "ui": {
+    "active_text_color": "#FFFFFF",
+    "inactive_text_color": "#000000",
+    "label_bg_color": "rgba(0, 0, 0, 180)",
+    "window_bg_color": "rgba(150, 150, 150, 10)",
+    "border_color": "rgba(10, 10, 10, 30)",
+    "font_family": "'Consolas','Microsoft YaHei','Courier New','monospace'",
+    "font_size": 12,
+    "increase_color": "#FFFFFF",
+    "decrease_color": "#FFFFFF",
+    "tray_icon_path": "icons/tray.png"
+  }
+}
