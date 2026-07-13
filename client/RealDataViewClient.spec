@@ -16,7 +16,11 @@ a = Analysis(
         (os.path.join(client_dir, 'icons', 'save.svg'), 'icons'),
         (os.path.join(client_dir, 'icons', 'tray.png'), 'icons'),
     ],
-    hiddenimports=[],
+    hiddenimports=[
+        'pynput.keyboard._win32',
+        'pynput._util.win32',
+        'pynput._util.win32_vks',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
