@@ -4,6 +4,11 @@ DataViewer 是一款桌面股票行情悬浮窗。它在桌面上以紧凑形式
 
 本仓库只包含开源客户端。行情服务端、数据源凭据、缓存与部署配置不包含在本仓库中。
 
+【我做了一个上班族炒股神器 DataViewer】 https://www.bilibili.com/video/BV1whNC6zEKM/?share_source=copy_web&vd_source=a0f078a41b30f299b843e9e6453bb81f
+
+
+![alt text](微信图片_20260712163513_763_1.png)
+
 ## 功能
 
 - 展示沪深股票价格和涨跌幅
