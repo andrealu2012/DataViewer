@@ -1,0 +1,108 @@
+name: Build Ubuntu DEB Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing GitHub Release tag, for example v1.0.1
+        required: true
+        type: string
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Resolve release version
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v?[0-9]+(\.[0-9]+){1,3}([.+~:-][0-9A-Za-z.+~:-]+)?$ ]]; then
+            echo "Unsupported release tag: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out release source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'release' && steps.release.outputs.tag || github.ref }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            binutils \
+            build-essential \
+            dpkg-dev \
+            libdbus-1-3 \
+            libegl1 \
+            libfontconfig1 \
+            libfreetype6 \
+            libgl1 \
+            libglib2.0-0 \
+            libx11-6 \
+            libx11-xcb1 \
+            libxcb1 \
+            libxcb-cursor0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
+            libxcb-shm0 \
+            libxcb-sync1 \
+            libxcb-util1 \
+            libxcb-xfixes0 \
+            libxcb-xinerama0 \
+            libxcb-xkb1 \
+            libxext6 \
+            libxi6 \
+            libxkbcommon0 \
+            libxkbcommon-x11-0 \
+            libxrender1 \
+            libxtst6 \
+            linux-libc-dev
+
+      - name: Build DEB package
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: ./build-client-linux.sh
+
+      - name: Verify DEB package
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          DEB_FILE="dist/DataViewer_${VERSION}_amd64.deb"
+          test -f "$DEB_FILE"
+          test "$(dpkg-deb --field "$DEB_FILE" Package)" = "dataviewer"
+          test "$(dpkg-deb --field "$DEB_FILE" Version)" = "$VERSION"
+          test "$(dpkg-deb --field "$DEB_FILE" Architecture)" = "amd64"
+          dpkg-deb --contents "$DEB_FILE"
+
+      - name: Upload DEB to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            "dist/DataViewer_${VERSION}_amd64.deb" \
+            --clobber

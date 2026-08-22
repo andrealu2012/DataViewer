@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=DataViewer
+Comment=Desktop stock quote overlay
+Exec=dataviewer
+Icon=dataviewer
+Terminal=false
+Categories=Office;Finance;
+StartupNotify=false

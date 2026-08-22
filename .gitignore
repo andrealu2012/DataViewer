@@ -3,6 +3,7 @@ __pycache__/
 
 .venv/
 .venv-macos/
+.venv-linux/
 venv/
 env/
 .env

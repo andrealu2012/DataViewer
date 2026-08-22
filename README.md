@@ -16,11 +16,11 @@ DataViewer 是一款桌面股票行情悬浮窗。它在桌面上以紧凑形式
 - 通过界面添加、删除和排序自选股
 - 使用系统托盘控制窗口
 - 使用全局快捷键显示或隐藏悬浮窗
-- 支持 Windows 和 macOS 源码构建
+- 支持 Windows、macOS 和 Ubuntu 源码构建
 
 ## 环境准备
 
-建议使用 Python 3.11 或更新的稳定版本。创建虚拟环境并安装依赖：
+建议使用 Python 3.10 或更新的稳定版本。创建虚拟环境并安装依赖：
 
 ### Windows PowerShell
 
@@ -34,6 +34,25 @@ python -m pip install -r requirements.txt
 ### macOS
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+### Ubuntu
+
+Ubuntu 22.04 或更新版本：
+
+```bash
+sudo apt update
+sudo apt install \
+  python3 python3-venv python3-pip python3-dev build-essential linux-libc-dev dpkg-dev binutils \
+  libdbus-1-3 libegl1 libfontconfig1 libfreetype6 libgl1 libglib2.0-0 \
+  libx11-6 libx11-xcb1 libxcb1 libxcb-cursor0 libxcb-icccm4 libxcb-image0 \
+  libxcb-keysyms1 libxcb-randr0 libxcb-render0 libxcb-render-util0 libxcb-shape0 \
+  libxcb-shm0 libxcb-sync1 libxcb-util1 libxcb-xfixes0 libxcb-xinerama0 \
+  libxcb-xkb1 libxext6 libxi6 libxkbcommon0 libxkbcommon-x11-0 libxrender1 libxtst6
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
@@ -72,12 +91,42 @@ chmod +x build-client-macos.sh
 
 macOS 构建必须在 macOS 上执行。未签名应用可能被系统安全机制拦截；公开分发时建议进行开发者签名和公证。
 
+Ubuntu：
+
+```bash
+chmod +x build-client-linux.sh
+./build-client-linux.sh
+```
+
+默认生成 `dist/DataViewer_1.0.0_<架构>.deb`。发布其他版本时可通过环境变量指定版本，例如：
+
+```bash
+VERSION=1.2.0 ./build-client-linux.sh
+```
+
+Ubuntu 构建必须在 Linux 上执行。安装和卸载示例：
+
+```bash
+sudo apt install ./dist/DataViewer_1.0.0_amd64.deb
+sudo apt remove dataviewer
+```
+
+应用配置保存在 `~/.config/DataViewer/config.json`。在 Wayland 会话中，全局快捷键的可用性取决于桌面环境的 XWayland 支持。
+
+### GitHub Release 自动生成 Ubuntu 安装包
+
+仓库包含 `.github/workflows/release-deb.yml`。将工作流提交到默认分支后，新建并发布形如 `v1.2.0` 的 GitHub Release，GitHub Actions 会在 Ubuntu 22.04 `amd64` runner 上构建，并把 `DataViewer_1.2.0_amd64.deb` 自动添加到该 Release。
+
+如需为已有 Release 补生成安装包，可在 GitHub 仓库的 **Actions → Build Ubuntu DEB Release → Run workflow** 中输入已有的 Release 标签。手动执行会使用页面中所选分支的代码构建；重复执行时会替换同名 `.deb` 文件。
+
 ## 项目结构
 
 ```text
 client/                  客户端源码、图标、默认配置及 PyInstaller 配置
 build-client.ps1         Windows 构建脚本
 build-client-macos.sh    macOS 构建脚本
+build-client-linux.sh    Ubuntu/Debian 构建及 .deb 打包脚本
+packaging/linux/         Linux 桌面启动项等打包资源
 requirements.txt         Python 依赖
 SECURITY.md              安全问题报告方式
 ```

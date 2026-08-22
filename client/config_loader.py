@@ -14,6 +14,11 @@ def runtime_dir() -> str:
             app_support = os.path.expanduser("~/Library/Application Support/DataViewer")
             os.makedirs(app_support, exist_ok=True)
             return app_support
+        if sys.platform.startswith("linux"):
+            config_home = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+            app_config = os.path.join(config_home, "DataViewer")
+            os.makedirs(app_config, exist_ok=True)
+            return app_config
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
 

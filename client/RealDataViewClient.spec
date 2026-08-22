@@ -6,6 +6,20 @@ import sys
 
 client_dir = os.path.abspath(SPECPATH)
 
+hiddenimports = []
+if sys.platform == 'win32':
+    hiddenimports += [
+        'pynput.keyboard._win32',
+        'pynput._util.win32',
+        'pynput._util.win32_vks',
+    ]
+elif sys.platform.startswith('linux'):
+    hiddenimports += [
+        'pynput.keyboard._xorg',
+        'pynput._util.xorg',
+        'pynput._util.xorg_keysyms',
+    ]
+
 a = Analysis(
     [os.path.join(client_dir, 'main.py')],
     pathex=[client_dir],
@@ -16,11 +30,7 @@ a = Analysis(
         (os.path.join(client_dir, 'icons', 'save.svg'), 'icons'),
         (os.path.join(client_dir, 'icons', 'tray.png'), 'icons'),
     ],
-    hiddenimports=[
-        'pynput.keyboard._win32',
-        'pynput._util.win32',
-        'pynput._util.win32_vks',
-    ],
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
