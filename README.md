@@ -113,11 +113,18 @@ sudo apt remove dataviewer
 
 应用配置保存在 `~/.config/DataViewer/config.json`。在 Wayland 会话中，全局快捷键的可用性取决于桌面环境的 XWayland 支持。
 
-### GitHub Release 自动生成 Ubuntu 安装包
+### GitHub Release 自动生成全平台安装包
 
-仓库包含 `.github/workflows/release-deb.yml`。将工作流提交到默认分支后，新建并发布形如 `v1.2.0` 的 GitHub Release，GitHub Actions 会在 Ubuntu 22.04 `amd64` runner 上构建，并把 `DataViewer_1.2.0_amd64.deb` 自动添加到该 Release。
+仓库包含 `.github/workflows/release-deb.yml`。新建并发布形如 `v1.2.0` 的 GitHub Release 后，GitHub Actions 会并行构建并添加以下资产：
 
-如需为已有 Release 补生成安装包，可在 GitHub 仓库的 **Actions → Build Ubuntu DEB Release → Run workflow** 中输入已有的 Release 标签。手动执行会使用页面中所选分支的代码构建；重复执行时会替换同名 `.deb` 文件。
+- `DataViewer-Windows-x64.zip`
+- `DataViewer-macOS-arm64.zip`（Apple Silicon）
+- `DataViewer-macOS-x86_64.zip`（Intel）
+- `DataViewer_1.2.0_amd64.deb`（Ubuntu/Debian）
+
+如需为已有 Release 补生成安装包，可在 GitHub 仓库的 **Actions → Build All Platform Release → Run workflow** 中输入已有的 Release 标签。手动执行会使用页面中所选分支的代码构建；重复执行时会替换同名资产。
+
+macOS 构建产物目前未进行开发者签名和公证，首次运行可能需要在系统设置的“隐私与安全性”中手动允许。
 
 ## 项目结构
 

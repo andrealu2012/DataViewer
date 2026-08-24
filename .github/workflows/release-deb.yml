@@ -1,4 +1,4 @@
-name: Build Ubuntu DEB Release
+name: Build All Platform Release
 
 on:
   release:
@@ -6,21 +6,27 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing GitHub Release tag, for example v1.0.1
+        description: Existing GitHub Release tag, for example v1.0.2
         required: true
         type: string
 
 jobs:
-  build-deb:
+  release:
+    name: Resolve release
     runs-on: ubuntu-22.04
     permissions:
-      contents: write
+      contents: read
+    outputs:
+      source_ref: ${{ steps.release.outputs.source_ref }}
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
 
     steps:
-      - name: Resolve release version
+      - name: Resolve release version and source
         id: release
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          SOURCE_REF: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
         shell: bash
         run: |
           set -euo pipefail
@@ -28,13 +34,128 @@ jobs:
             echo "Unsupported release tag: $RELEASE_TAG" >&2
             exit 1
           fi
-          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
-          echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+          {
+            echo "source_ref=$SOURCE_REF"
+            echo "tag=$RELEASE_TAG"
+            echo "version=${RELEASE_TAG#v}"
+          } >> "$GITHUB_OUTPUT"
 
+  windows:
+    name: Windows x64
+    needs: release
+    runs-on: windows-2022
+    permissions:
+      contents: write
+
+    steps:
       - name: Check out release source
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event_name == 'release' && steps.release.outputs.tag || github.ref }}
+          ref: ${{ needs.release.outputs.source_ref }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install Python dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Build Windows package
+        shell: pwsh
+        run: .\build-client.ps1
+
+      - name: Verify Windows package
+        shell: pwsh
+        run: |
+          $zipFile = "dist\DataViewer-Windows-x64.zip"
+          if (-not (Test-Path -LiteralPath $zipFile)) {
+              throw "Missing release asset: $zipFile"
+          }
+          $extractDir = Join-Path $env:RUNNER_TEMP "dataviewer-windows"
+          Expand-Archive -LiteralPath $zipFile -DestinationPath $extractDir -Force
+          if (-not (Test-Path -LiteralPath (Join-Path $extractDir "DataViewer.exe"))) {
+              throw "DataViewer.exe is missing from the Windows archive."
+          }
+
+      - name: Upload Windows package to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+        shell: pwsh
+        run: gh release upload $env:RELEASE_TAG "dist\DataViewer-Windows-x64.zip" --clobber
+
+  macos:
+    name: macOS ${{ matrix.arch }}
+    needs: release
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+            asset: DataViewer-macOS-arm64.zip
+          - runner: macos-15-intel
+            arch: x86_64
+            asset: DataViewer-macOS-x86_64.zip
+
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release.outputs.source_ref }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Build macOS package
+        env:
+          PYTHON_BIN: python
+        run: ./build-client-macos.sh
+
+      - name: Verify macOS package
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+          ZIP_FILE: dist/${{ matrix.asset }}
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = "$EXPECTED_ARCH"
+          test -f "$ZIP_FILE"
+          unzip -t "$ZIP_FILE"
+          unzip -l "$ZIP_FILE" > "$RUNNER_TEMP/dataviewer-zip-list.txt"
+          grep -q 'DataViewer.app/Contents/MacOS/DataViewer' "$RUNNER_TEMP/dataviewer-zip-list.txt"
+
+      - name: Upload macOS package to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+          ZIP_FILE: dist/${{ matrix.asset }}
+        run: gh release upload "$RELEASE_TAG" "$ZIP_FILE" --clobber
+
+  linux:
+    name: Ubuntu/Debian amd64
+    needs: release
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release.outputs.source_ref }}
           persist-credentials: false
 
       - name: Set up Python
@@ -83,12 +204,13 @@ jobs:
 
       - name: Build DEB package
         env:
-          VERSION: ${{ steps.release.outputs.version }}
+          PYTHON_BIN: python
+          VERSION: ${{ needs.release.outputs.version }}
         run: ./build-client-linux.sh
 
       - name: Verify DEB package
         env:
-          VERSION: ${{ steps.release.outputs.version }}
+          VERSION: ${{ needs.release.outputs.version }}
         run: |
           DEB_FILE="dist/DataViewer_${VERSION}_amd64.deb"
           test -f "$DEB_FILE"
@@ -97,11 +219,11 @@ jobs:
           test "$(dpkg-deb --field "$DEB_FILE" Architecture)" = "amd64"
           dpkg-deb --contents "$DEB_FILE"
 
-      - name: Upload DEB to GitHub Release
+      - name: Upload DEB package to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
-          VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+          VERSION: ${{ needs.release.outputs.version }}
         run: |
           gh release upload "$RELEASE_TAG" \
             "dist/DataViewer_${VERSION}_amd64.deb" \
